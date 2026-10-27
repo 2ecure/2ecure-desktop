@@ -1,0 +1,191 @@
+/*
+ * Copyright 2024-2025 New Vector Ltd.
+ *
+ * SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+ * Please see LICENSE files in the repository root for full details.
+ */
+
+import { Alert, Button, InlineSpinner, VisualList, VisualListItem } from "@vector-im/compound-web";
+import CheckCircle from "@vector-im/compound-design-tokens/assets/web/icons/check-circle";
+import Group from "@vector-im/compound-design-tokens/assets/web/icons/group";
+import UserProfileSolid from "@vector-im/compound-design-tokens/assets/web/icons/user-profile-solid";
+import VisibilityOff from "@vector-im/compound-design-tokens/assets/web/icons/visibility-off";
+import React, { type JSX, useState } from "react";
+
+import { _t } from "../../../../languageHandler";
+import { EncryptionCard } from "./EncryptionCard";
+import { uiAuthCallback } from "../../../../CreateCrossSigning";
+import { EncryptionCardButtons } from "./EncryptionCardButtons";
+import { EncryptionCardEmphasisedContent } from "./EncryptionCardEmphasisedContent";
+import { useMatrixClientContext } from "../../../../contexts/MatrixClientContext";
+
+interface ResetIdentityBodyProps {
+    /**
+     * Called when the identity is reset.
+     */
+    onReset: () => void;
+
+    /**
+     * Called when the "Go back" or "Sign out" button is clicked.
+     */
+    onCancelClick: () => void;
+
+    /**
+     * The variant of the panel to show. We show more warnings in the 'compromised' variant (no use in showing a user
+     * this warning if they have to reset because they no longer have their key)
+     */
+    variant: ResetIdentityBodyVariant;
+}
+
+/**
+ * The variant of the panel to show.  This affects the message displayed to the user.
+ *
+ * "compromised" is shown when the user chose 'Reset cryptographic identity' explicitly in settings, usually because
+ * they believe their identity has been compromised.
+ *
+ * "sync_failed" is shown when the user tried to recover their identity but the process failed, probably because
+ * the required information is missing from recovery.
+ *
+ * "forgot" is shown when the user chose 'Forgot recovery key?' during `SetupEncryptionToast`.
+ *
+ * "confirm" is shown when the user chose 'Reset all' during `SetupEncryptionBody`.
+ *
+ * "no_verification_method" is shown when the device is unverified and has no way of
+ * obtaining the existing keys, and hence the identity needs to be reset to have
+ * a cross-signed device. When this variant is used, a "Sign out" button is displayed
+ * instead of the normal cancel ("Go back") button.
+ */
+export type ResetIdentityBodyVariant = "compromised" | "forgot" | "sync_failed" | "confirm" | "no_verification_method";
+
+/**
+ * User interface component allowing the user to reset their cryptographic identity.
+ *
+ * Used by {@link ResetIdentityPanel}.
+ */
+export function ResetIdentityBody({ onCancelClick, onReset, variant }: ResetIdentityBodyProps): JSX.Element {
+    const matrixClient = useMatrixClientContext();
+
+    // After the user clicks "Continue", we disable the button so it can't be
+    // clicked again, and warn the user not to close the window.
+    const [inProgress, setInProgress] = useState(false);
+
+    return (
+        <EncryptionCard
+            Icon={UserProfileSolid}
+            title={titleForVariant(variant)}
+            description={descriptionForVariant(variant)}
+        >
+            <EncryptionCardEmphasisedContent>
+                <VisualList>
+                    <VisualListItem Icon={CheckCircle} success={true}>
+                        {_t("settings|encryption|advanced|breadcrumb_first_description")}
+                    </VisualListItem>
+                    <VisualListItem Icon={VisibilityOff}>
+                        {_t("settings|encryption|advanced|breadcrumb_second_description")}
+                    </VisualListItem>
+                    <VisualListItem Icon={Group}>
+                        {_t("settings|encryption|advanced|breadcrumb_third_description")}
+                    </VisualListItem>
+                </VisualList>
+                {variant === "compromised" && <span>{_t("settings|encryption|advanced|breadcrumb_warning")}</span>}
+            </EncryptionCardEmphasisedContent>
+            {alertForVariant(variant)}
+            <EncryptionCardButtons>
+                <Button
+                    destructive={destructiveForVariant(variant)}
+                    disabled={inProgress}
+                    onClick={async () => {
+                        setInProgress(true);
+                        await matrixClient
+                            .getCrypto()
+                            ?.resetEncryption((makeRequest) => uiAuthCallback(matrixClient, makeRequest));
+                        onReset();
+                    }}
+                >
+                    {inProgress ? (
+                        <>
+                            <InlineSpinner /> {_t("settings|encryption|advanced|reset_in_progress")}
+                        </>
+                    ) : (
+                        _t("action|continue")
+                    )}
+                </Button>
+                {inProgress ? (
+                    <EncryptionCardEmphasisedContent>
+                        <span className="mx_ResetIdentityPanel_warning">
+                            {_t("settings|encryption|advanced|do_not_close_warning")}
+                        </span>
+                    </EncryptionCardEmphasisedContent>
+                ) : (
+                    <Button kind="tertiary" onClick={onCancelClick}>
+                        {cancelTextForVariant(variant)}
+                    </Button>
+                )}
+            </EncryptionCardButtons>
+        </EncryptionCard>
+    );
+}
+
+function titleForVariant(variant: ResetIdentityBodyVariant): string {
+    switch (variant) {
+        case "confirm":
+            return _t("settings|encryption|advanced|breadcrumb_title");
+        case "compromised":
+            return _t("settings|encryption|advanced|breadcrumb_title_compromised");
+        case "sync_failed":
+            return _t("settings|encryption|advanced|breadcrumb_title_sync_failed");
+        case "forgot":
+            return _t("settings|encryption|advanced|breadcrumb_title_forgot");
+        case "no_verification_method":
+            return _t("settings|encryption|advanced|breadcrumb_title_cant_confirm");
+    }
+}
+
+function descriptionForVariant(variant: ResetIdentityBodyVariant): string | undefined {
+    switch (variant) {
+        case "no_verification_method":
+            return _t("settings|encryption|advanced|breadcrumb_description_no_verification_method");
+        case "confirm":
+            return _t("settings|encryption|advanced|breadcrumb_description");
+        case "compromised":
+        case "sync_failed":
+        case "forgot":
+            return undefined;
+    }
+}
+
+function alertForVariant(variant: string): JSX.Element | undefined {
+    switch (variant) {
+        case "confirm":
+            return <Alert type="critical" title={_t("settings|encryption|advanced|breadcrumb_alert_cant_confirm")} />;
+        case "no_verification_method":
+        case "compromised":
+        case "sync_failed":
+        case "forgot":
+            return undefined;
+    }
+}
+
+function cancelTextForVariant(variant: ResetIdentityBodyVariant): string {
+    switch (variant) {
+        case "confirm":
+        case "compromised":
+        case "sync_failed":
+        case "forgot":
+            return _t("action|go_back");
+        case "no_verification_method":
+            return _t("action|sign_out_before_verify");
+    }
+}
+
+function destructiveForVariant(variant: ResetIdentityBodyVariant): boolean {
+    switch (variant) {
+        case "no_verification_method":
+            return false;
+        case "confirm":
+        case "compromised":
+        case "sync_failed":
+        case "forgot":
+            return true;
+    }
+}

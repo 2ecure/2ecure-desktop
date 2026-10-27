@@ -1,0 +1,38 @@
+/*
+ * Copyright 2025 New Vector Ltd.
+ *
+ * SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+ * Please see LICENSE files in the repository root for full details.
+ */
+
+.pillInput {
+    border-radius: 24px;
+    padding: var(--cpd-space-3x);
+    /* To match pill height in order to avoid the PillInput to grow when a pill is inserted */
+    min-height: 24px;
+    border: 1px solid var(--cpd-color-border-interactive-secondary);
+}
+
+.pillInput:hover {
+    border-color: var(--cpd-color-border-interactive-hovered);
+}
+
+.pillInput:focus-within {
+    border-color: var(--cpd-color-border-interactive-pressed);
+}
+
+.input {
+    all: unset;
+    width: 100%;
+    flex: 1;
+    color: var(--cpd-color-text-primary);
+}
+
+.input::placeholder {
+    color: var(--cpd-color-text-secondary);
+    font: var(--cpd-font-body-md-regular);
+}
+
+.largerInput {
+    padding: var(--cpd-space-2x) 0;
+}

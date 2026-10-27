@@ -1,0 +1,24 @@
+/*
+Copyright 2026 Element Creations Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+.mx_PictureInPictureDragger {
+    cursor: grab;
+    user-select: none;
+    left: 0;
+    position: fixed;
+    top: 0;
+    /*
+     * Rendered in #mx_PersistedElement_container: display above docked widgets (z-index 9),
+     * but below the persisted widget shown in the PiP itself (z-index 101), which is
+     * positioned over a placeholder inside this element.
+     */
+    z-index: 100;
+}
+
+.mx_PictureInPictureDragger:active {
+    cursor: grabbing;
+}

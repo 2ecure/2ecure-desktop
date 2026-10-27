@@ -1,0 +1,28 @@
+/*
+ * Copyright 2026 Element Creations Ltd.
+ *
+ * SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+ * Please see LICENSE files in the repository root for full details.
+ */
+
+.picker_menu {
+    max-inline-size: none;
+
+    /*
+     * Awful, brittle hack to remove padding from the menu which is now added on the content child
+     * This probably ought to be a parameter to the compound component if we sometimes don't want padding.
+     */
+    > [role="none"] {
+        padding: 0;
+        gap: 0;
+        --cpd-menu-padding-block-end: 0;
+    }
+}
+
+.picker_menu_item {
+    padding: var(--cpd-space-3x) var(--cpd-space-5x);
+}
+
+.picker_separator {
+    margin-inline: 0;
+}

@@ -1,0 +1,246 @@
+/*
+Copyright 2025 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE files in the repository root for full details.
+*/
+
+import { type MatrixEvent } from "matrix-js-sdk/src/matrix";
+import { logger } from "matrix-js-sdk/src/logger";
+
+import type {
+    CustomComponentsApi as ICustomComponentsApi,
+    CustomMessageRenderFunction,
+    CustomMessageComponentProps as ModuleCustomMessageComponentProps,
+    OriginalMessageComponentProps,
+    CustomMessageRenderHints as ModuleCustomCustomMessageRenderHints,
+    MatrixEvent as ModuleMatrixEvent,
+    CustomRoomPreviewBarRenderFunction,
+    CustomLoginRenderFunction,
+    CustomComposerPreviewRenderFunction,
+    CustomComposerPreviewComponentProps,
+} from "@element-hq/element-web-module-api";
+import type React from "react";
+import { getModuleMatrixEvent } from "./models/Event";
+
+type EventTypeOrFilter = Parameters<ICustomComponentsApi["registerMessageRenderer"]>[0];
+type ComposerPreviewFilterFn = Parameters<ICustomComponentsApi["registerComposerPreview"]>[0];
+
+type EventRenderer = {
+    eventTypeOrFilter: EventTypeOrFilter;
+    renderer: CustomMessageRenderFunction;
+    hints: ModuleCustomCustomMessageRenderHints;
+};
+
+/** Grouping selected for a timeline event. */
+export interface MessageGrouping {
+    renderer: object;
+    key: string;
+    summarize: (events: readonly MatrixEvent[]) => string | null;
+}
+
+interface CustomMessageComponentProps extends Omit<ModuleCustomMessageComponentProps, "mxEvent"> {
+    mxEvent: MatrixEvent;
+}
+
+interface CustomMessageRenderHints extends Omit<ModuleCustomCustomMessageRenderHints, "allowDownloadingMedia"> {
+    // Note. This just makes it easier to use this API on Element Web as we already have the moduleized event stored.
+    allowDownloadingMedia?: () => Promise<boolean>;
+}
+
+/** The selected renderer and hints for one event during a render pass. */
+export interface MessageRenderInfo {
+    hints: CustomMessageRenderHints;
+    hasGrouping: boolean;
+    getGrouping: () => MessageGrouping | null;
+}
+
+type ComposerPreviewRenderer = {
+    filter: ComposerPreviewFilterFn;
+    renderer: CustomComposerPreviewRenderFunction;
+};
+
+export class CustomComponentsApi implements ICustomComponentsApi {
+    private readonly registeredMessageRenderers: EventRenderer[] = [];
+    private readonly registeredComposerPreviewRenderers: ComposerPreviewRenderer[] = [];
+
+    public registerMessageRenderer(
+        eventTypeOrFilter: EventTypeOrFilter,
+        renderer: CustomMessageRenderFunction,
+        hints: ModuleCustomCustomMessageRenderHints = {},
+    ): void {
+        this.registeredMessageRenderers.push({ eventTypeOrFilter: eventTypeOrFilter, renderer, hints });
+    }
+
+    /**
+     * Select the correct renderer based on the event information.
+     * @param mxEvent The message event being rendered.
+     * @returns The registered renderer.
+     */
+    private selectMessageRenderer(mxEvent: ModuleMatrixEvent): EventRenderer | undefined {
+        return this.registeredMessageRenderers.find((renderer) => {
+            if (typeof renderer.eventTypeOrFilter === "string") {
+                return renderer.eventTypeOrFilter === mxEvent.type;
+            } else {
+                try {
+                    return renderer.eventTypeOrFilter(mxEvent);
+                } catch (ex) {
+                    logger.warn("Message renderer failed to process filter", ex);
+                    return false; // Skip erroring renderers.
+                }
+            }
+        });
+    }
+
+    /**
+     * Render the component for a message event.
+     * @param props Props to be passed to the custom renderer.
+     * @param originalComponent Function that will be rendered if no custom renderers are present, or as a child of a custom component.
+     * @returns A component if a custom renderer exists, or originalComponent returns a value. Otherwise null.
+     */
+    public renderMessage(
+        props: CustomMessageComponentProps,
+        originalComponent?: (props?: OriginalMessageComponentProps) => React.JSX.Element,
+    ): React.JSX.Element | null {
+        const moduleEv = this.registeredMessageRenderers.length ? getModuleMatrixEvent(props.mxEvent) : null;
+        const renderer = moduleEv && this.selectMessageRenderer(moduleEv);
+        if (renderer) {
+            try {
+                return renderer.renderer({ ...props, mxEvent: moduleEv }, originalComponent);
+            } catch (ex) {
+                logger.warn("Message renderer failed to render", ex);
+                // Fall through to original component. If the module encounters an error we still want to display messages to the user!
+            }
+        }
+        return originalComponent?.() ?? null;
+    }
+
+    /**
+     * Resolve one event's custom renderer for reuse during a render pass.
+     * @param mxEvent The message event being rendered.
+     * @returns The selected renderer's hints and lazy grouping, or null.
+     */
+    public getMessageRenderInfo(mxEvent: MatrixEvent): MessageRenderInfo | null {
+        if (!this.registeredMessageRenderers.length) return null;
+        const moduleEv = getModuleMatrixEvent(mxEvent);
+        const renderer = moduleEv && this.selectMessageRenderer(moduleEv);
+        if (!moduleEv || !renderer) return null;
+
+        let resolvedGrouping: MessageGrouping | null | undefined;
+        return {
+            hints: {
+                ...renderer.hints,
+                // Convert from js-sdk style events to module events automatically.
+                allowDownloadingMedia: renderer.hints.allowDownloadingMedia
+                    ? () => renderer.hints.allowDownloadingMedia!(moduleEv)
+                    : undefined,
+            },
+            hasGrouping: !!renderer.hints.renderGroupSummary && !mxEvent.isRedacted(),
+            getGrouping: () => {
+                if (resolvedGrouping === undefined) {
+                    resolvedGrouping = this.createGrouping(mxEvent, moduleEv, renderer);
+                }
+                return resolvedGrouping;
+            },
+        };
+    }
+
+    /** Get hints about a message before rendering it. */
+    public getHintsForMessage(mxEvent: MatrixEvent): CustomMessageRenderHints | null {
+        return this.getMessageRenderInfo(mxEvent)?.hints ?? null;
+    }
+
+    private createGrouping(
+        mxEvent: MatrixEvent,
+        moduleEv: ModuleMatrixEvent,
+        renderer: EventRenderer,
+    ): MessageGrouping | null {
+        const grouping = renderer.hints.renderGroupSummary;
+        if (!grouping || mxEvent.isRedacted()) return null;
+
+        let key = "";
+        try {
+            key = grouping.getKey?.(moduleEv) ?? "";
+        } catch (ex) {
+            logger.warn("Message grouping failed to determine key", ex);
+            key = moduleEv.eventId;
+        }
+
+        return {
+            renderer,
+            key,
+            summarize: (events) => {
+                const moduleEvents = events.map(getModuleMatrixEvent);
+                if (!moduleEvents.every((event): event is ModuleMatrixEvent => event !== null)) return null;
+                try {
+                    const summary = grouping.getSummary(moduleEvents);
+                    return typeof summary === "string" && summary.trim() ? summary : null;
+                } catch (ex) {
+                    logger.warn("Message grouping failed to generate summary", ex);
+                    return null;
+                }
+            },
+        };
+    }
+
+    private _roomPreviewBarRenderer?: CustomRoomPreviewBarRenderFunction;
+
+    /**
+     * Get the custom room preview bar renderer, if any has been registered.
+     */
+    public get roomPreviewBarRenderer(): CustomRoomPreviewBarRenderFunction | undefined {
+        return this._roomPreviewBarRenderer;
+    }
+
+    /**
+     * Register a custom room preview bar renderer.
+     * @param renderer - the function that will render the custom room preview bar.
+     */
+    public registerRoomPreviewBar(renderer: CustomRoomPreviewBarRenderFunction): void {
+        this._roomPreviewBarRenderer = renderer;
+    }
+
+    private _loginRenderer?: CustomLoginRenderFunction;
+
+    /**
+     * Get the custom login component renderer, if any has been registered.
+     */
+    public get loginComponentRenderer(): CustomLoginRenderFunction | undefined {
+        return this._loginRenderer;
+    }
+
+    /**
+     * Register a custom login component renderer.
+     * @param renderer - the function that will render the login component.
+     */
+    public registerLoginComponent(renderer: CustomLoginRenderFunction): void {
+        this._loginRenderer = renderer;
+    }
+
+    public registerComposerPreview(
+        filter: ComposerPreviewFilterFn,
+        renderer: CustomComposerPreviewRenderFunction,
+    ): void {
+        this.registeredComposerPreviewRenderers.push({ filter, renderer });
+    }
+    /**
+     * Render the component for a composer preview.
+     * @param props Props to be passed to the custom renderer.
+     * @param originalComponent Function that will be rendered if no custom renderers are present, or as a child of a custom component.
+     * @returns A component if a custom renderer was found. Otherwise null.
+     */
+    public renderComposerPreview(
+        props: CustomComposerPreviewComponentProps,
+        originalComponent: (props?: CustomComposerPreviewComponentProps) => React.JSX.Element,
+    ): React.JSX.Element | null {
+        const renderer = this.registeredComposerPreviewRenderers.find(({ filter }) => filter(props.text, props.roomId));
+        if (renderer) {
+            try {
+                return renderer.renderer({ ...props }, originalComponent);
+            } catch (ex) {
+                logger.warn("Composer preview failed to render", ex);
+            }
+        }
+        return null;
+    }
+}
