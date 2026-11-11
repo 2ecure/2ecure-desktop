@@ -4,15 +4,15 @@
     "main": "lib/electron-main.js",
     "exports": "./lib/electron-main.js",
     "version": "1.12.33",
-    "description": "Element: the future of secure communication",
+    "description": "2ecure Messenger",
     "author": {
-        "name": "Element",
-        "email": "support@element.io"
+        "name": "2ecure",
+        "email": "support@2ecure.com"
     },
-    "homepage": "https://element.io",
+    "homepage": "https://2ecure.com",
     "repository": {
         "type": "git",
-        "url": "https://github.com/vector-im/element-web"
+        "url": "https://github.com/2ecure/2ecure-desktop"
     },
     "license": "SEE LICENSE IN README.md",
     "type": "module",
