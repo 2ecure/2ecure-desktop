@@ -193,6 +193,25 @@ const config: Omit<Writable<Configuration>, "electronFuses"> & {
     msi: {
         perMachine: true,
     },
+    // 2ecure: the Microsoft Store package (target appx, built on Windows only). Partner Center
+    // assigns the identity when the app name is reserved; CI passes it in, so builds without it
+    // (Squirrel, macOS) are unaffected. The Store signs the package; a build for the Store stays
+    // unsigned. AppX installs have no Update.exe, so the app's own updater stays off there.
+    appx: {
+        identityName: process.env.TWOECURE_APPX_IDENTITY_NAME,
+        publisher: process.env.TWOECURE_APPX_PUBLISHER,
+        publisherDisplayName: process.env.TWOECURE_APPX_PUBLISHER_DISPLAY_NAME,
+        applicationId: "TwoEcure",
+        // one file per architecture (x64 and arm64 go into the same Store submission)
+        artifactName: "${productName}-${version}-${arch}.${ext}",
+        displayName: "2ecure Messenger",
+        backgroundColor: "#1B1D22",
+        languages: ["de-CH", "en-US"],
+        capabilities: ["microphone", "webcam"],
+        addAutoLaunchExtension: false,
+        maxVersionTested: "10.0.26100.0",
+    },
+    copyright: "© 2026 2ecure, based on Element (AGPL-3.0)",
     directories: {
         output: "dist",
     },
