@@ -1,0 +1,74 @@
+{
+  "common|homeserver": {
+    "en": "Welcome to 2ecure\nChat and call securely – with people you know.\n\n2ecure is an invite-only community. To sign in,\nyou need an existing account or an invitation.",
+    "de": "Willkommen bei 2ecure\nSicher schreiben und telefonieren –\nmit Menschen, die du kennst.\n\n2ecure ist eine Community nur auf Einladung.\nZum Anmelden brauchst du ein bestehendes\nKonto oder eine Einladung.",
+    "fr": "Bienvenue sur 2ecure\nÉcrivez et appelez en toute sécurité –\navec les personnes que vous connaissez.\n\n2ecure est une communauté sur invitation.\nPour vous connecter, il vous faut un compte\nexistant ou une invitation.",
+    "it": "Ti diamo il benvenuto su 2ecure\nScrivi e chiama in tutta sicurezza –\ncon le persone che conosci.\n\n2ecure è una comunità solo su invito. Per accedere\nti serve un account esistente o un invito."
+  },
+  "encryption|verify_toast_title": {
+    "it": "Verifica questo dispositivo"
+  },
+  "encryption|verify_toast_description": {
+    "en": "You need 2ecure on your phone or your recovery key. Until then, this device can’t read your earlier encrypted messages. <a>How it works</a>",
+    "de": "Dazu brauchst du 2ecure auf deinem Smartphone oder deinen Wiederherstellungsschlüssel. Bis dahin kann dieses Gerät deine bisherigen verschlüsselten Nachrichten nicht lesen. <a>So funktioniert es</a>",
+    "fr": "Il vous faut 2ecure sur votre téléphone ou votre clé de récupération. D’ici là, cet appareil ne peut pas lire vos anciens messages chiffrés. <a>Comment faire</a>",
+    "it": "Ti serve 2ecure sul telefono oppure la chiave di recupero. Fino ad allora questo dispositivo non può leggere i messaggi cifrati precedenti. <a>Come fare</a>"
+  },
+  "encryption|verification|confirm_identity_title": {
+    "it": "Conferma la tua identità digitale"
+  },
+  "encryption|verification|confirm_identity_description": {
+    "en": "Open 2ecure on your phone or on another device where you’re signed in, then choose “Use another device”. Or use your recovery key.",
+    "de": "Öffne 2ecure auf deinem Smartphone oder einem anderen Gerät, auf dem du angemeldet bist, und wähle dann «Anderes Gerät verwenden». Oder nutze deinen Wiederherstellungsschlüssel.",
+    "fr": "Ouvrez 2ecure sur votre téléphone ou sur un autre appareil déjà connecté à votre compte, puis choisissez « Utiliser un autre appareil ». Ou utilisez votre clé de récupération.",
+    "it": "Apri 2ecure sul telefono o su un altro dispositivo già collegato al tuo account, poi scegli «Usa un altro dispositivo». Oppure usa la chiave di recupero."
+  },
+  "encryption|verification|use_another_device": {
+    "it": "Usa un altro dispositivo"
+  },
+  "encryption|verification|use_recovery_key": {
+    "it": "Usa la chiave di recupero"
+  },
+  "encryption|verification|cant_confirm": {
+    "it": "Non puoi confermare?"
+  },
+  "encryption|verification|verification_dialog_title_start_on_other_device": {
+    "en": "Open 2ecure on your other device",
+    "de": "Öffne 2ecure auf deinem anderen Gerät",
+    "fr": "Ouvrez 2ecure sur votre autre appareil",
+    "it": "Apri 2ecure sull’altro dispositivo"
+  },
+  "encryption|verification|once_accepted_can_continue": {
+    "en": "For example on your phone. “Verification requested” appears there by itself: tap “Start verification”, then compare the emojis on both screens. Nothing appears? Keep the app open in the foreground, close this window and try again.",
+    "de": "Zum Beispiel auf deinem Smartphone. Dort erscheint von selbst «Verifizierung angefordert»: Tippe auf «Verifizierung starten» und vergleiche dann die Emojis auf beiden Bildschirmen. Erscheint nichts? Lass die App im Vordergrund offen, schliesse dieses Fenster und versuche es noch einmal.",
+    "fr": "Par exemple sur votre téléphone. « Vérification demandée » s’y affiche automatiquement : appuyez sur « Commencer la vérification », puis comparez les émojis sur les deux écrans. Rien ne s’affiche ? Gardez l’application ouverte au premier plan, fermez cette fenêtre et réessayez.",
+    "it": "Per esempio sul telefono. Lì compare automaticamente «Richiesta di verifica»: tocca «Avvia la verifica», poi confronta le emoji sui due schermi. Non compare nulla? Tieni l’app aperta in primo piano, chiudi questa finestra e riprova."
+  },
+  "encryption|verification|verification_dialog_title_choose": {
+    "it": "Scegli come verificare"
+  },
+  "encryption|verification|verification_dialog_title_compare_emojis": {
+    "it": "Confronta le emoji"
+  },
+  "encryption|verification|confirm_the_emojis": {
+    "it": "Verifica che le emoji sottostanti corrispondano a quelle mostrate sull’altro dispositivo."
+  },
+  "encryption|verification|verification_dialog_title_verified": {
+    "it": "Dispositivo verificato"
+  },
+  "encryption|verification|verification_dialog_title_failed": {
+    "it": "Verifica fallita"
+  },
+  "encryption|verification|cancelled_verification": {
+    "it": "La richiesta è scaduta, è stata rifiutata o c’è stata una mancata corrispondenza nella verifica."
+  },
+  "encryption|verification_requested_toast_title": {
+    "de": "Verifizierung angefordert",
+    "fr": "Vérification demandée",
+    "it": "Richiesta di verifica"
+  },
+  "encryption|verification|request_toast_start_verification": {
+    "en": "Start verification",
+    "it": "Avvia la verifica"
+  }
+}

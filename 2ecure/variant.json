@@ -1,0 +1,7 @@
+{
+    "appId": "com.2ecure.desktop",
+    "name": "twoecure-desktop",
+    "productName": "2ecure",
+    "description": "2ecure Messenger",
+    "protocols": ["com.2ecure.desktop"]
+}

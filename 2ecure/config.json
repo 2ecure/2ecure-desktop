@@ -1,0 +1,117 @@
+{
+    "brand": "2ecure",
+    "branding": {
+        "auth_footer_links": [
+            {
+                "text": "Datenschutz",
+                "url": "https://2ecure.com/datenschutz"
+            },
+            {
+                "text": "AGB",
+                "url": "https://2ecure.com/agb"
+            },
+            {
+                "text": "Impressum",
+                "url": "https://2ecure.com/impressum"
+            }
+        ],
+        "auth_header_logo_url": "https://2ecure.com/brand/logo-round.svg",
+        "logo_link_url": "https://2ecure.com",
+        "welcome_background_url": "https://2ecure.com/brand/background.svg"
+    },
+    "bug_report_endpoint_url": "local",
+    "custom_translations_url": "modules/2ecure/translations.json",
+    "default_country_code": "CH",
+    "default_server_config": {
+        "m.homeserver": {
+            "base_url": "https://matrix.2ecure.com",
+            "server_name": "2ecure.com"
+        }
+    },
+    "desktop_builds": {
+        "available": false
+    },
+    "disable_3pid_login": true,
+    "disable_custom_urls": true,
+    "disable_guests": true,
+    "element_call": {
+        "brand": "2ecure Call",
+        "use_exclusively": true
+    },
+    "embedded_pages": {
+        "login_for_welcome": true
+    },
+    "existing_issues_url": "https://2ecure.com/support",
+    "features": {
+        "feature_element_call_video_rooms": true,
+        "feature_video_rooms": true
+    },
+    "help_encryption_url": "https://2ecure.com/hilfe#verschluesselung",
+    "help_key_storage_url": "https://2ecure.com/hilfe#schluesselspeicher",
+    "help_url": "https://2ecure.com/hilfe",
+    "integrations_rest_url": null,
+    "integrations_ui_url": null,
+    "integrations_widgets_urls": [],
+    "map_style_url": null,
+    "mobile_builds": {
+        "ios": null,
+        "android": null,
+        "fdroid": null
+    },
+    "mobile_guide_app_variant": "element",
+    "mobile_guide_toast": false,
+    "modules": [
+        "/modules/2ecure/index.js"
+    ],
+    "new_issue_url": "https://2ecure.com/support",
+    "oidc_metadata": {
+        "client_uri": "https://2ecure.com",
+        "policy_uri": "https://2ecure.com/datenschutz",
+        "tos_uri": "https://2ecure.com/agb"
+    },
+    "permalink_prefix": "https://chat.2ecure.com",
+    "privacy_policy_url": "https://2ecure.com/datenschutz",
+    "report_event": {
+        "admin_message_md": "Meldungen werden vom 2ecure-Team innert 24 Stunden gemäss unseren [AGB](https://2ecure.com/agb) geprüft."
+    },
+    "room_directory": {
+        "servers": [
+            "2ecure.com"
+        ]
+    },
+    "setting_defaults": {
+        "UIFeature.deactivate": false,
+        "UIFeature.feedback": false,
+        "UIFeature.identityServer": false,
+        "UIFeature.locationSharing": false,
+        "UIFeature.passwordReset": false,
+        "UIFeature.registration": false,
+        "UIFeature.shareSocial": false,
+        "UIFeature.thirdPartyId": false,
+        "urlPreviewsEnabled": false
+    },
+    "show_labs_settings": false,
+    "sso_redirect_options": {
+        "immediate": false
+    },
+    "terms_and_conditions_links": [
+        {
+            "text": "Datenschutz",
+            "url": "https://2ecure.com/datenschutz"
+        },
+        {
+            "text": "AGB",
+            "url": "https://2ecure.com/agb"
+        },
+        {
+            "text": "Impressum",
+            "url": "https://2ecure.com/impressum"
+        },
+        {
+            "text": "Quellcode (AGPL)",
+            "url": "https://2ecure.com/source"
+        }
+    ],
+    "update_base_url": "https://2ecure.com/download/desktop/update/",
+    "web_base_url": "https://chat.2ecure.com/"
+}

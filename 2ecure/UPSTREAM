@@ -1,0 +1,8 @@
+REPOSITORY=https://github.com/element-hq/element-web.git
+TAG=v1.12.33
+COMMIT=45671bc88ffe82658619bc523458f3ae3a43bff0
+# Element Web's release package of the same tag, bundled into the app (the server's Element Web image is built from it).
+WEBAPP_URL=https://github.com/element-hq/element-web/releases/download/v1.12.33/element-v1.12.33.tar.gz
+WEBAPP_SHA256=04e180516430381d5f5e528ea345a435784bba26f76a84f106a623febd3fcd67
+# Verified 2026-11-11: tag v1.12.33 (2026-10-27) at this commit; WEBAPP_SHA256 equals GitHub's asset digest and the
+# copy scripts/check-ess-render.sh downloaded for the server. Same Element Web release as ESS 26.11.0 (server).

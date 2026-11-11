@@ -1,27 +1,48 @@
 {
-    "fill": "automatic",
-    "groups": [
+  "fill": "automatic",
+  "groups": [
+    {
+      "layers": [
         {
-            "layers": [
-                {
-                    "glass": false,
-                    "image-name": "element.png",
-                    "name": "element"
-                }
-            ],
-            "name": "Figma",
-            "shadow": {
-                "kind": "none",
-                "opacity": 0.5
-            },
-            "specular": false,
-            "translucency": {
-                "enabled": false,
-                "value": 0.5
-            }
+          "glass": false,
+          "image-name": "Mark.svg",
+          "name": "Mark"
         }
-    ],
-    "supported-platforms": {
-        "squares": ["macOS"]
+      ],
+      "name": "Mark",
+      "shadow": {
+        "kind": "none",
+        "opacity": 0.5
+      },
+      "specular": false,
+      "translucency": {
+        "enabled": false,
+        "value": 0.5
+      }
+    },
+    {
+      "layers": [
+        {
+          "glass": false,
+          "image-name": "Background.png",
+          "name": "Background"
+        }
+      ],
+      "name": "Background",
+      "shadow": {
+        "kind": "none",
+        "opacity": 0.5
+      },
+      "specular": false,
+      "translucency": {
+        "enabled": false,
+        "value": 0.5
+      }
     }
+  ],
+  "supported-platforms": {
+    "squares": [
+      "macOS"
+    ]
+  }
 }

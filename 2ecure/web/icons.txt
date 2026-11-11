@@ -1,0 +1,15 @@
+# Element Web icon (in webapp/) and the 2ecure file in icons/ that replaces it.
+# From deploy/ess/values/60-elementweb.yaml of the 2ecure-messenger project, like the server.
+vector-icons/24.97ab000.png rounded-24.png
+vector-icons/120.570a7f9.png square-120.png
+vector-icons/144.5a63bf2.png rounded-144.png
+vector-icons/152.1ccdc8a.png square-152.png
+vector-icons/180.30b915f.png square-180.png
+vector-icons/512.7ce350d.png rounded-512.png
+vector-icons/24.png rounded-24.png
+vector-icons/120.png rounded-120.png
+vector-icons/144.png rounded-144.png
+vector-icons/152.png rounded-152.png
+vector-icons/180.png rounded-180.png
+vector-icons/512.png rounded-512.png
+vector-icons/1024.png rounded-1024.png
