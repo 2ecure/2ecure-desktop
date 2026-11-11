@@ -14,7 +14,6 @@ import { randomUUID } from "node:crypto";
 
 import { type Args, getArgsForProtocolRegistration } from "./args.js";
 
-const LEGACY_PROTOCOL = "element";
 const SEARCH_PARAM = "element-desktop-ssoid";
 const STORE_FILE_NAME = "sso-sessions.json";
 
@@ -49,19 +48,17 @@ export default class ProtocolHandler {
     }
 
     private checkArgIsUrl = (arg: string): boolean => {
-        return arg.startsWith(`${this.protocol}:/`) || arg.startsWith(`${LEGACY_PROTOCOL}://`);
+        return arg.startsWith(`${this.protocol}:/`);
     };
 
     private setAsDefaultProtocolClient(parsedArgs: Args): void {
         const args = getArgsForProtocolRegistration(parsedArgs);
         if (app.isPackaged) {
             app.setAsDefaultProtocolClient(this.protocol, process.execPath, args);
-            app.setAsDefaultProtocolClient(LEGACY_PROTOCOL, process.execPath, args);
         } else if (process.platform === "win32") {
             // on Mac/Linux this would just cause the electron binary to open
             // special handler for running without being packaged, e.g `electron .` by passing our app path to electron
             app.setAsDefaultProtocolClient(this.protocol, process.execPath, [app.getAppPath(), ...args]);
-            app.setAsDefaultProtocolClient(LEGACY_PROTOCOL, process.execPath, [app.getAppPath(), ...args]);
         }
     }
 
@@ -79,7 +76,7 @@ export default class ProtocolHandler {
         // sanity check: we only register for the one protocol, so we shouldn't
         // be getting anything else unless the user is forcing a URL to open
         // with the Element app.
-        if (parsed.protocol !== `${this.protocol}:` && parsed.protocol !== `${LEGACY_PROTOCOL}:`) {
+        if (parsed.protocol !== `${this.protocol}:`) {
             console.log("Ignoring unexpected protocol: ", parsed.protocol);
             return false;
         }
@@ -142,12 +139,10 @@ export default class ProtocolHandler {
 
     public getProfileFromDeeplink(args: string[]): string | undefined {
         // check if we are passed a profile in the SSO callback url
-        const deeplinkUrl = args.find(
-            (arg) => arg.startsWith(`${this.protocol}:/`) || arg.startsWith(`${LEGACY_PROTOCOL}://`),
-        );
+        const deeplinkUrl = args.find((arg) => arg.startsWith(`${this.protocol}:/`));
         if (deeplinkUrl?.includes(SEARCH_PARAM)) {
             const parsedUrl = new URL(deeplinkUrl);
-            if (parsedUrl.protocol === `${this.protocol}:` || parsedUrl.protocol === `${LEGACY_PROTOCOL}:`) {
+            if (parsedUrl.protocol === `${this.protocol}:`) {
                 const store = this.readStore();
                 let sessionId = parsedUrl.searchParams.get(SEARCH_PARAM);
                 if (!sessionId) {

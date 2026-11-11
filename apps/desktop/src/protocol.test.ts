@@ -56,13 +56,13 @@ describe("ProtocolHandler", () => {
     describe("getProfileFromDeeplink", () => {
         const handler = new ProtocolHandler(TEST_PROTOCOL);
 
-        it("should handle legacy SSO URIs", () => {
+        it("should ignore Element's legacy element:// SSO URIs", () => {
             expect(
                 handler.getProfileFromDeeplink([
                     "Element.app",
                     `element://vector/webapp/?element-desktop-ssoid=${TEST_SESSION_ID}`,
                 ]),
-            ).toBe(USER_DATA_DIR);
+            ).toBeUndefined();
         });
 
         it("should handle OIDC URIs with response_mode=query", () => {
@@ -150,7 +150,8 @@ describe("ProtocolHandler", () => {
 
             const args = ["--no-update"];
             expect(app.setAsDefaultProtocolClient).toHaveBeenCalledWith(TEST_PROTOCOL, "/bin/element-desktop", args);
-            expect(app.setAsDefaultProtocolClient).toHaveBeenCalledWith("element", "/bin/element-desktop", args);
+            expect(app.setAsDefaultProtocolClient).not.toHaveBeenCalledWith("element", "/bin/element-desktop", args);
+            expect(app.setAsDefaultProtocolClient).toHaveBeenCalledTimes(1);
         });
 
         it("should handle deeplink", () => {
