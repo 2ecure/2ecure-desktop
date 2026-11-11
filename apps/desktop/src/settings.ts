@@ -19,6 +19,12 @@ interface Setting {
 
 const Settings: Record<string, Setting> = {
     "Electron.autoLaunch": {
+        // 2ecure: a Microsoft Store (AppX) install cannot start itself this way: Windows keeps the package's
+        // registry writes to itself, so the Run entry auto-launch writes is never read. Hide the setting there
+        // rather than offer a switch that does nothing; Windows' own startup apps list still works for the user.
+        supported(): boolean {
+            return !process.windowsStore;
+        },
         async read(): Promise<AutoLaunchState> {
             return AutoLaunch.instance.getState();
         },
