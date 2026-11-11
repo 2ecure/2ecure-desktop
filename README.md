@@ -1,117 +1,48 @@
-[![Chat](https://img.shields.io/matrix/element-web:matrix.org?logo=matrix)](https://matrix.to/#/#element-web:matrix.org)
-![Tests](https://github.com/element-hq/element-web/actions/workflows/tests.yaml/badge.svg)
-![Static Analysis](https://github.com/element-hq/element-web/actions/workflows/static_analysis.yaml/badge.svg)
-[![Localazy](https://img.shields.io/endpoint?url=https%3A%2F%2Fconnect.localazy.com%2Fstatus%2Felement-web%2Fdata%3Fcontent%3Dall%26title%3Dlocalazy%26logo%3Dtrue)](https://localazy.com/p/element-web)
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=element-web&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=element-web)
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=element-web&metric=coverage)](https://sonarcloud.io/summary/new_code?id=element-web)
-[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=element-web&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=element-web)
-[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=element-web&metric=bugs)](https://sonarcloud.io/summary/new_code?id=element-web)
+# 2ecure desktop
 
-# Element
+The desktop app of [2ecure Messenger](https://2ecure.com) for macOS and Windows: Element Desktop with 2ecure's
+name, icons and settings, locked to the 2ecure.com server. It is the source of the apps offered on
+https://2ecure.com/apps/desktop/ and in the Microsoft Store (Switzerland).
 
-Element (formerly known as Vector and Riot) is a Matrix web & desktop client built using the [Matrix
-JS SDK](https://github.com/matrix-org/matrix-js-sdk).
+2ecure Messenger basiert auf der Open-Source-Software Element und dem offenen Matrix-Protokoll. 2ecure ist kein
+Produkt von Element und nicht mit Element Creations Ltd oder der Matrix.org Foundation verbunden.
+2ecure Messenger is based on the open-source software Element and the open Matrix protocol. 2ecure is not a product
+of Element and is not affiliated with Element Creations Ltd or the Matrix.org Foundation.
 
-# Supported Environments
+## What is in this repository
 
-Element has several tiers of support for different environments:
+The history shows every change against Element:
 
-- Supported
-    - Definition:
-        - Issues **actively triaged**, regressions **block** the release
-    - Last 2 major versions of Chrome, Firefox, and Edge on desktop OSes
-    - Last 2 versions of Safari
-    - Latest release of official Element Desktop app on desktop OSes
-    - Desktop OSes means macOS, Windows, and Linux versions for desktop devices
-      that are actively supported by the OS vendor and receive security updates
-- Best effort
-    - Definition:
-        - Issues **accepted**, regressions **do not block** the release
-        - The wider Element Products (including Element Call and the Enterprise Server Suite) do still not officially support these browsers.
-        - The element web project and its contributors should keep the client functioning and gracefully degrade where other sibling features (E.g. Element Call) may not function.
-    - Last major release of Firefox ESR and Chrome/Edge Extended Stable
-- Community Supported
-    - Definition:
-        - Issues **accepted**, regressions **do not block** the release
-        - Community contributions are welcome to support these issues
-    - Mobile web for current stable version of Chrome, Firefox, and Safari on Android, iOS, and iPadOS
-- Not supported
-    - Definition: Issues only affecting unsupported environments are **closed**
-    - Everything else
+1. **Import:** the unmodified tree of [element-hq/element-web](https://github.com/element-hq/element-web) at the
+   release tag named in `2ecure/UPSTREAM` (Element Web and Element Desktop share that repository and its version).
+2. **One commit per change** to Element's code (`apps/desktop`): only the app's own link scheme, 2ecure as author,
+   the Microsoft Store package settings, no start-at-login switch in the Store package, Squirrel's icon from
+   2ecure.com and no electron-updater metadata.
+3. **2ecure overlay** (`2ecure/`, `apps/desktop/build/`): the configuration (`2ecure/config.json`, the same as
+   chat.2ecure.com's with the desktop app's differences), the app identity (`2ecure/variant.json`), the Element Web
+   module, brand script and icons that chat.2ecure.com uses, and the 2ecure app icons.
+4. **Fork setup:** `2ecure/prepare.sh` (puts the branded Element Web into the app), `2ecure/build-mac.sh` (macOS
+   build, signing, notarisation), `.github/workflows/2ecure-desktop-windows.yml` (Windows Setup.exe and Store
+   package), `apps/desktop/playwright/e2e/2ecure.spec.ts` (checks of the built app). Element's own CI is removed.
 
-The period of support for these tiers should last until the releases specified above, plus 1 app release cycle(2 weeks). In the case of Firefox ESR this is extended further to allow it land in Debian Stable.
+Every released build is tagged `2ecure-desktop-<Element version>-build<n>`.
 
-For accessing Element on an Android or iOS device, we currently recommend the
-native apps [element-x-android](https://github.com/element-hq/element-x-android)
-and [element-x-ios](https://github.com/element-hq/element-x-ios).
+The tree is generated by `desktop/apply.py` in the 2ecure project; changes are made there and the fork is rebuilt.
 
-# Getting Started
+## Build
 
-The easiest way to test Element is to just use the hosted copy at <https://app.element.io>.
-The `develop` branch is continuously deployed to <https://develop.element.io>
-for those who like living dangerously.
+macOS (Xcode 26, node 24, pnpm 12, jq, python3 with pyobjc Quartz):
 
-To host your own instance of Element see [Installing Element Web](docs/install.md).
+```bash
+bash 2ecure/build-mac.sh 1.12.3301 unsigned
+```
 
-To install Element as a desktop application, see [Running as a desktop app](#running-as-a-desktop-app) below.
+Windows: run the workflow «2ecure desktop (Windows)» with the version.
 
----
+The version is `1.12.<Element patch × 100 + 2ecure build>`: 1.12.3301 is Element 1.12.33, 2ecure build 1.
 
-# Monorepo
+## Licence
 
-This repository is a monorepo hosting Element Web and other related projects in various subdirectories.
-You can read more about the structure [here](docs/monorepo.md).
-
-# Element Web
-
-To learn more about Element Web [click here](apps/web/README.md)
-
-# Running as a Desktop app
-
-Element can also be run as a desktop app, wrapped in Electron. You can download a
-pre-built version from <https://element.io/get-started> or, if you prefer,
-build it yourself.
-
-To build it yourself, follow the instructions at <https://github.com/element-hq/element-web/tree/develop/apps/desktop>.
-
-Many thanks to @aviraldg for the initial work on the Electron integration.
-
-The [configuration docs](docs/config.md#desktop-app-configuration) show how to override the desktop app's default settings if desired.
-
-# Development
-
-Please read through the following:
-
-1. [Developer guide](./developer_guide.md)
-2. [Code style](./code_style.md)
-3. [Contribution guide](./CONTRIBUTING.md)
-
-# Translations
-
-To add a new translation, head to the [translating doc](docs/translating.md).
-
-For a developer guide, see the [translating dev doc](docs/translating-dev.md).
-
-# Triaging issues
-
-Issues are triaged by community members and the Web App Team, following the [triage process](https://github.com/element-hq/element-meta/wiki/Triage-process).
-
-We use [issue labels](https://github.com/element-hq/element-meta/wiki/Issue-labelling) to sort all incoming issues.
-
-## Copyright & License
-
-Copyright (c) 2014-2017 OpenMarket Ltd
-Copyright (c) 2017 Vector Creations Ltd
-Copyright (c) 2017-2025 New Vector Ltd
-
-This software is multi licensed by New Vector Ltd (Element). It can be used either:
-
-(1) for free under the terms of the GNU Affero General Public License (as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version); OR
-
-(2) for free under the terms of the GNU General Public License (as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version); OR
-
-(3) under the terms of a paid-for Element Commercial License agreement between you and Element (the terms of which may vary depending on what you and Element have agreed to).
-Unless required by applicable law or agreed to in writing, software distributed under the Licenses is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the Licenses for the specific language governing permissions and limitations under the Licenses.
-
-Please contact [licensing@element.io](mailto:licensing@element.io) to purchase
-an Element commercial license for this software.
+As Element's: AGPL-3.0-only or GPL-3.0-only, at your option (`LICENSE-AGPL-3.0`, `LICENSE-GPL-3.0`). Element's
+own README is `README.element.md`. Element's commercial licence (`LICENSE-COMMERCIAL`) is Element's and does not
+cover 2ecure's changes.

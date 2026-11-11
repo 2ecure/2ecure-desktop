@@ -1,0 +1,264 @@
+# 2ecure desktop for Windows: the Setup.exe (Squirrel, x64, signed, updates itself from 2ecure.com) and the Microsoft
+# Store package (AppX, x64 and arm64, unsigned: the Store signs it). Based on Element's build_desktop_windows.yaml.
+# Source of this file: desktop/ci/ in the 2ecure-messenger project (desktop/apply.py copies it into the fork).
+#
+# Signing: SSL.com eSigner, as Element does. sign=true: the environment «2ecure eSigner» with the secrets
+# ESIGNER_USER_NAME/_PASSWORD/_TOTP (environment secrets, not repository secrets, so a trial run never sees them),
+# ESIGNER_MODE=product and ESIGNER_EXPECTED_SUBJECT (the certificate's CN); the run fails without them. sign=false:
+# SSL.com's public demo credentials, an untrusted signature that tests the pipeline; those artifacts are named
+# TEST-UNTRUSTED-… and carry SIGNING-windows «test-untrusted», and scripts/vm/45-desktop-publish.sh refuses them.
+# Store identity: repository variables TWOECURE_APPX_IDENTITY_NAME, TWOECURE_APPX_PUBLISHER and
+# TWOECURE_APPX_PUBLISHER_DISPLAY_NAME (Partner Center › Product identity). Without them no Store package is built.
+name: 2ecure desktop (Windows)
+on:
+    workflow_dispatch:
+        inputs:
+            version:
+                description: "Version 1.12.<Element patch × 100 + 2ecure build>, e.g. 1.12.3301"
+                required: true
+            sign:
+                description: "Sign with the 2ecure certificate (environment «2ecure eSigner»); off: SSL.com demo signature"
+                type: boolean
+                default: false
+permissions:
+    contents: read
+defaults:
+    run:
+        shell: powershell
+jobs:
+    build:
+        name: Build and test
+        runs-on: windows-2025
+        environment: ${{ inputs.sign && '2ecure eSigner' || '' }}
+        timeout-minutes: 90
+        env:
+            SIGNTOOL_PATH: "C:/Program Files (x86)/Windows Kits/10/bin/10.0.26100.0/x86/signtool.exe"
+            VERSION: ${{ inputs.version }}
+            VARIANT_PATH: ../../2ecure/variant.json
+            HAVE_APPX: ${{ vars.TWOECURE_APPX_IDENTITY_NAME != '' }}
+            # Nx caches «build» by source files only: a new VERSION or signing would get an old dist back.
+            NX_SKIP_NX_CACHE: "true"
+            NX_DAEMON: "false"
+            ARTIFACT_PREFIX: ${{ inputs.sign && '2ecure-desktop' || 'TEST-UNTRUSTED-2ecure-desktop' }}
+        steps:
+            - name: Check the version
+              shell: bash
+              run: '[[ "$VERSION" =~ ^1\.[0-9]+\.[0-9]+$ ]] || { echo "version must look like 1.12.3301"; exit 1; }'
+
+            # As Element: nx wants LF line endings (https://github.com/nrwl/nx/issues/35828)
+            - name: Configure git line endings
+              run: |
+                  git config --system core.autocrlf false
+                  git config --system core.eol lf
+
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+              with:
+                  persist-credentials: false
+
+            - uses: pnpm/setup@a0881977cd8ea73b1ed212236c99ca10dcc80cf4 # v3.1.1
+              id: pnpm
+              with:
+                  node-version-file: apps/desktop/.node-version
+                  cache: true
+                  install: false
+
+            - name: Branded Element Web (2ecure/prepare.sh)
+              shell: bash
+              run: bash 2ecure/prepare.sh
+
+            # The prebuilt search index libraries (seshat) for x64 and arm64: the Store package has both.
+            - name: Install optional dependencies for x64 and arm64
+              shell: bash
+              run: |
+                  cat >> pnpm-workspace.yaml <<EOF
+
+                  supportedArchitectures:
+                      os: [current]
+                      cpu: [x64, arm64]
+                  EOF
+
+            - name: Install dependencies
+              working-directory: apps/desktop
+              run: pnpm install --frozen-lockfile --filter element-desktop
+
+            - name: Pack the web app
+              working-directory: apps/desktop
+              run: pnpm run asar-webapp
+
+            - name: Install and configure eSigner CKA
+              run: |
+                  Set-StrictMode -Version 'Latest'
+                  Invoke-WebRequest -OutFile eSigner_CKA.zip "$env:ESIGNER_URL"
+                  Expand-Archive -Path eSigner_CKA.zip -DestinationPath .
+                  Get-ChildItem -Path * -Include "*_build_*.exe" | Rename-Item -NewName eSigner_CKA.exe
+                  New-Item -ItemType Directory -Force -Path "$env:INSTALL_DIR"
+                  ./eSigner_CKA.exe /CURRENTUSER /VERYSILENT /SUPPRESSMSGBOXES /DIR="${{ env.INSTALL_DIR }}" | Out-Null
+                  $LogConfig = Get-Content -Path ${{ env.INSTALL_DIR }}/log4net.config
+                  $LogConfig[0] = '<log4net threshold="OFF">'
+                  $LogConfig | Set-Content -Path ${{ env.INSTALL_DIR }}/log4net.config
+                  if ($env:SIGN -eq 'true') {
+                      foreach ($v in 'ESIGNER_USER_NAME', 'ESIGNER_USER_PASSWORD', 'ESIGNER_USER_TOTP', 'ESIGNER_EXPECTED_SUBJECT') {
+                          if (-not (Get-Item "env:$v" -ErrorAction SilentlyContinue).Value) { throw "sign=true needs $v (environment «2ecure eSigner»)" }
+                      }
+                      if ($env:ESIGNER_MODE -ne 'product') { throw "sign=true needs ESIGNER_MODE=product" }
+                      $user = $env:ESIGNER_USER_NAME; $pass = $env:ESIGNER_USER_PASSWORD; $totp = $env:ESIGNER_USER_TOTP
+                  } else {
+                      # SSL.com's public demo credentials: https://www.ssl.com/guide/esigner-demo-credentials-and-certificates/
+                      $user = 'esigner_demo'; $pass = 'esignerDemo#1'; $totp = 'RDXYgV9qju+6/7GnMf1vCbKexXVJmUVr+86Wq/8aIGg='
+                  }
+                  # Passed as arguments from variables, never pasted into the script's source.
+                  & "$env:INSTALL_DIR/eSignerCKATool.exe" config -mode "$env:ESIGNER_MODE" -user $user -pass $pass -totp $totp `
+                      -key "$env:MASTER_KEY_FILE" -r
+                  if ($LASTEXITCODE -ne 0) { throw "eSignerCKATool config failed" }
+                  ${{ env.INSTALL_DIR }}/eSignerCKATool.exe unload
+                  ${{ env.INSTALL_DIR }}/eSignerCKATool.exe load
+                  $CodeSigningCert = Get-ChildItem Cert:\CurrentUser\My -CodeSigningCert | Select-Object -First 1
+                  if (-not $CodeSigningCert) { throw "no code signing certificate from eSigner" }
+                  echo Certificate: $CodeSigningCert
+                  $Thumbprint = $CodeSigningCert.Thumbprint
+                  $SubjectName = ($CodeSigningCert.Subject -replace ", ?", "`n" | ConvertFrom-StringData).CN
+                  if ($env:SIGN -eq 'true' -and $SubjectName -ne $env:ESIGNER_EXPECTED_SUBJECT) {
+                      throw "certificate CN '$SubjectName' is not the expected '$env:ESIGNER_EXPECTED_SUBJECT'"
+                  }
+                  echo "ED_SIGNTOOL_THUMBPRINT=$Thumbprint" >> $env:GITHUB_ENV
+                  echo "ED_SIGNTOOL_SUBJECT_NAME=$SubjectName" >> $env:GITHUB_ENV
+              env:
+                  SIGN: ${{ inputs.sign }}
+                  ESIGNER_MODE: ${{ inputs.sign && vars.ESIGNER_MODE || 'sandbox' }}
+                  ESIGNER_USER_NAME: ${{ inputs.sign && secrets.ESIGNER_USER_NAME || '' }}
+                  ESIGNER_USER_PASSWORD: ${{ inputs.sign && secrets.ESIGNER_USER_PASSWORD || '' }}
+                  ESIGNER_USER_TOTP: ${{ inputs.sign && secrets.ESIGNER_USER_TOTP || '' }}
+                  ESIGNER_EXPECTED_SUBJECT: ${{ inputs.sign && vars.ESIGNER_EXPECTED_SUBJECT || '' }}
+                  ESIGNER_URL: https://github.com/SSLcom/eSignerCKA/releases/download/v1.0.6/SSL.COM-eSigner-CKA_1.0.6.zip
+                  INSTALL_DIR: C:\Users\runneradmin\eSignerCKA
+                  MASTER_KEY_FILE: C:\Users\runneradmin\eSignerCKA\master.key
+
+            - name: Build the Setup.exe (Squirrel, x64, signed)
+              working-directory: apps/desktop
+              shell: bash
+              run: pnpm run build --publish never --x64 -w squirrel
+
+            - name: Trust the eSigner demo certificate
+              if: ${{ !inputs.sign }}
+              run: Import-Certificate -CertStoreLocation Cert:\LocalMachine\Root -FilePath .github/SSLcom-sandbox.crt
+
+            - name: Check the signatures and count them
+              working-directory: apps/desktop
+              shell: bash
+              run: |
+                  ls -la dist dist/squirrel-windows
+                  test -f "dist/squirrel-windows/2ecure Setup $VERSION.exe"
+                  test -f "dist/squirrel-windows/twoecure-desktop-$VERSION-full.nupkg"
+                  test -f dist/squirrel-windows/RELEASES
+                  for f in dist/squirrel-windows/*.exe dist/win-unpacked/*.exe; do "$SIGNTOOL_PATH" verify //pa //v "$f" | grep -E "Issued to|Successfully verified"; done
+                  # Every signature costs an eSigner signing: count the signed files of this build.
+                  n=0; while IFS= read -r -d '' f; do "$SIGNTOOL_PATH" verify //pa //q "$f" >/dev/null 2>&1 && n=$((n+1)); done \
+                    < <(find dist/win-unpacked dist/squirrel-windows -type f \( -iname '*.exe' -o -iname '*.dll' -o -iname '*.node' \) -print0)
+                  echo "signed files in this build: $n" | tee -a "$GITHUB_STEP_SUMMARY"
+                  # What was built, for the publish step (it refuses anything but «production»).
+                  echo "$VERSION ${{ inputs.sign && 'production' || 'test-untrusted' }} $ED_SIGNTOOL_SUBJECT_NAME $ED_SIGNTOOL_THUMBPRINT $GITHUB_SHA" > dist/squirrel-windows/SIGNING-windows
+                  cat dist/squirrel-windows/SIGNING-windows | tee -a "$GITHUB_STEP_SUMMARY"
+                  sha256sum dist/squirrel-windows/* | tee -a "$GITHUB_STEP_SUMMARY"
+
+            # Every connection from the first instant of the start, renderer and network service alike (DNS lookups,
+            # sockets, WebSockets): Chromium's net log. 60 s covers start-up and the first update check would come at
+            # 30 s (an unpacked app has no Update.exe, so it makes none). Signing in, calls and help links are in the
+            # owner's acceptance test.
+            - name: Network check of the start-up (net log)
+              working-directory: apps/desktop
+              shell: bash
+              run: |
+                  profile=$(mktemp -d)
+                  ./dist/win-unpacked/2ecure.exe --profile-dir="$profile" --log-net-log="$PWD/netlog.json" --net-log-capture-mode=Default &
+                  pid=$!; sleep 60; kill $pid 2>/dev/null || true; taskkill //F //IM 2ecure.exe >/dev/null 2>&1 || true; sleep 3
+                  python - netlog.json <<'PY'
+                  import re, sys
+                  text = open(sys.argv[1], encoding="utf-8", errors="replace").read()
+                  found = re.findall(r'"(?:url|original_url|uri|host|host_and_port|server)"\s*:\s*"([^"]+)"', text)
+                  def host(v):  # «https://matrix.2ecure.com:443/x», «matrix.2ecure.com:443», «[::1]:80» -> the name
+                      v = re.sub(r"^[a-z][a-z0-9+.-]*://", "", v.lower()).split("/")[0]
+                      return re.sub(r":\d+$", "", v).strip("[]")
+                  hosts = {host(v) for v in found if not v.startswith(("data:", "blob:", "vector:", "chrome", "devtools:", "file:"))}
+                  hosts = {h for h in hosts if h and h not in ("localhost", "127.0.0.1", "::1")}
+                  print("hosts:", sorted(hosts))
+                  bad = sorted(h for h in hosts if not re.fullmatch(r"(?:[a-z0-9-]+\.)*2ecure\.com", h))
+                  if not hosts: sys.exit("net log has no hosts: the capture did not work")
+                  if bad: sys.exit(f"contacted outside 2ecure.com: {bad}")
+                  PY
+
+            - name: Test the app (2ecure.spec.ts)
+              working-directory: apps/desktop
+              shell: bash
+              timeout-minutes: 20
+              run: |
+                  # The test copy only: Playwright needs this fuse, the packaged files above stay as built.
+                  rm -rf ../../test-app && cp -r dist/win-unpacked ../../test-app
+                  pnpm exec electron-fuses write --app ../../test-app/2ecure.exe EnableNodeCliInspectArguments=on
+                  ELEMENT_DESKTOP_EXECUTABLE=../../test-app/2ecure.exe pnpm playwright test 2ecure --reporter=list
+
+            - name: Build the Microsoft Store package (AppX, x64 and arm64, unsigned)
+              if: env.HAVE_APPX == 'true'
+              working-directory: apps/desktop
+              shell: bash
+              run: |
+                  rm -rf dist/win-unpacked dist/win-arm64-unpacked
+                  # Unsigned: the Store signs it. Without these, electron-builder.ts sets no certificate.
+                  ED_SIGNTOOL_SUBJECT_NAME= ED_SIGNTOOL_THUMBPRINT= pnpm run build --publish never --x64 --arm64 -w appx
+                  ls -la dist
+              env:
+                  TWOECURE_APPX_IDENTITY_NAME: ${{ vars.TWOECURE_APPX_IDENTITY_NAME }}
+                  TWOECURE_APPX_PUBLISHER: ${{ vars.TWOECURE_APPX_PUBLISHER }}
+                  TWOECURE_APPX_PUBLISHER_DISPLAY_NAME: ${{ vars.TWOECURE_APPX_PUBLISHER_DISPLAY_NAME }}
+
+            - name: Test the Store package (install, link scheme, start)
+              if: env.HAVE_APPX == 'true'
+              working-directory: apps/desktop
+              run: |
+                  Set-StrictMode -Version 'Latest'
+                  $ErrorActionPreference = 'Stop'
+                  $appx = Get-ChildItem dist -Filter "2ecure-$env:VERSION-x64.appx" | Select-Object -First 1
+                  if (-not $appx) { throw "no x64 Store package in dist" }
+                  if (-not (Test-Path "dist/2ecure-$env:VERSION-arm64.appx")) { throw "no arm64 Store package in dist" }
+                  Copy-Item $appx.FullName test.appx
+                  # A throw-away certificate with the Store publisher's name, trusted on this runner only, so Windows
+                  # installs the test copy. The package for the Store stays unsigned.
+                  $cert = New-SelfSignedCertificate -Type Custom -Subject "$env:TWOECURE_APPX_PUBLISHER" -KeyUsage DigitalSignature `
+                      -FriendlyName "2ecure CI test" -CertStoreLocation Cert:\CurrentUser\My `
+                      -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3", "2.5.29.19={text}")
+                  Export-Certificate -Cert $cert -FilePath test.cer | Out-Null
+                  Import-Certificate -FilePath test.cer -CertStoreLocation Cert:\LocalMachine\TrustedPeople | Out-Null
+                  & $env:SIGNTOOL_PATH sign /fd sha256 /sha1 $cert.Thumbprint test.appx
+                  if ($LASTEXITCODE -ne 0) { throw "signtool failed" }
+                  Add-AppxPackage -Path test.appx
+                  $pkg = Get-AppxPackage -Name "$env:TWOECURE_APPX_IDENTITY_NAME"
+                  $manifest = [xml](Get-Content (Join-Path $pkg.InstallLocation AppxManifest.xml))
+                  if (-not ($manifest.OuterXml -match 'Name="com.2ecure.desktop"')) { throw "no com.2ecure.desktop protocol" }
+                  if (Test-Path (Join-Path $pkg.InstallLocation 'Update.exe')) { throw "Squirrel's Update.exe in the Store package" }
+                  Start-Process "shell:AppsFolder\$($pkg.PackageFamilyName)!TwoEcure"
+                  Start-Sleep -Seconds 20
+                  $p = Get-Process -Name 2ecure -ErrorAction SilentlyContinue
+                  if (-not $p) { throw "the Store app did not start" }
+                  "Store app running: $($p.Count) processes, $($pkg.PackageFullName)" | Tee-Object -Append $env:GITHUB_STEP_SUMMARY
+                  $p | Stop-Process -Force
+                  Remove-AppxPackage -Package $pkg.PackageFullName
+                  Get-FileHash dist/*.appx -Algorithm SHA256 | Format-Table -AutoSize | Out-String | Tee-Object -Append $env:GITHUB_STEP_SUMMARY
+              env:
+                  TWOECURE_APPX_IDENTITY_NAME: ${{ vars.TWOECURE_APPX_IDENTITY_NAME }}
+                  TWOECURE_APPX_PUBLISHER: ${{ vars.TWOECURE_APPX_PUBLISHER }}
+
+            - name: Upload the Setup.exe and the update package
+              uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+              with:
+                  name: ${{ env.ARTIFACT_PREFIX }}-windows-${{ inputs.version }}
+                  path: apps/desktop/dist/squirrel-windows/
+                  retention-days: 7
+                  if-no-files-found: error
+
+            - name: Upload the Store packages
+              if: env.HAVE_APPX == 'true'
+              uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+              with:
+                  name: ${{ env.ARTIFACT_PREFIX }}-store-${{ inputs.version }}
+                  path: apps/desktop/dist/*.appx
+                  retention-days: 7
+                  if-no-files-found: error
