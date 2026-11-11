@@ -193,6 +193,14 @@ const config: Omit<Writable<Configuration>, "electronFuses"> & {
     msi: {
         perMachine: true,
     },
+    // 2ecure: the icon Squirrel writes into the update package's metadata (shown by Windows tools that list the
+    // package). Without it electron-builder makes up a GitHub address from the repository field, which does not exist.
+    squirrelWindows: {
+        iconUrl: "https://2ecure.com/favicon.ico",
+    },
+    // 2ecure: no electron-updater metadata (app-update.yml, latest-mac.yml). Element Desktop updates through Squirrel
+    // from update_base_url; electron-builder would otherwise guess GitHub from the repository field and write it in.
+    publish: null,
     // 2ecure: the Microsoft Store package (target appx, built on Windows only). Partner Center
     // assigns the identity when the app name is reserved; CI passes it in, so builds without it
     // (Squirrel, macOS) are unaffected. The Store signs the package; a build for the Store stays
