@@ -175,10 +175,15 @@ jobs:
               run: |
                   profile=$(mktemp -d)
                   ./dist/win-unpacked/2ecure.exe --profile-dir="$profile" --log-net-log="$PWD/netlog.json" --net-log-capture-mode=Default &
-                  pid=$!; sleep 60; kill $pid 2>/dev/null || true; taskkill //F //IM 2ecure.exe >/dev/null 2>&1 || true; sleep 3
-                  python - netlog.json <<'PY'
-                  import re, sys
-                  text = open(sys.argv[1], encoding="utf-8", errors="replace").read()
+                  sleep 60
+                  # Stopping the app here is never clean, and a network service that dies before the main process is
+                  # restarted and starts the log afresh (run 43091052626: an empty log). So: a copy of the log while
+                  # the app runs, then every process at once, and the check reads both files.
+                  cp netlog.json netlog-60s.json || echo "::warning::no copy of the running net log"
+                  taskkill //F //T //IM 2ecure.exe >/dev/null 2>&1 || true; sleep 3
+                  python - netlog-60s.json netlog.json <<'PY'
+                  import os, re, sys
+                  text = "".join(open(f, encoding="utf-8", errors="replace").read() for f in sys.argv[1:] if os.path.exists(f))
                   found = re.findall(r'"(?:url|original_url|uri|host|host_and_port|server)"\s*:\s*"([^"]+)"', text)
                   def host(v):  # «https://matrix.2ecure.com:443/x», «matrix.2ecure.com:443», «[::1]:80» -> the name
                       v = re.sub(r"^[a-z][a-z0-9+.-]*://", "", v.lower()).split("/")[0]
