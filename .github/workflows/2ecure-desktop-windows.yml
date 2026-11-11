@@ -203,7 +203,9 @@ jobs:
                   # The test copy only: Playwright needs this fuse, the packaged files above stay as built.
                   rm -rf ../../test-app && cp -r dist/win-unpacked ../../test-app
                   pnpm exec electron-fuses write --app ../../test-app/2ecure.exe EnableNodeCliInspectArguments=on
-                  ELEMENT_DESKTOP_EXECUTABLE=../../test-app/2ecure.exe pnpm playwright test 2ecure --reporter=list
+                  # The filter is a regular expression on the whole path, and the runner's checkout is D:\a\2ecure-desktop\…:
+                  # a bare «2ecure» selected Element's own tests too (they wait for Element's welcome page, which 2ecure has not).
+                  ELEMENT_DESKTOP_EXECUTABLE=../../test-app/2ecure.exe pnpm playwright test '2ecure\.spec\.ts$' --reporter=list
 
             - name: Build the Microsoft Store package (AppX, x64 and arm64, unsigned)
               if: env.HAVE_APPX == 'true'
