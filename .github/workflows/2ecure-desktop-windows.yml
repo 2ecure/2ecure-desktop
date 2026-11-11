@@ -136,7 +136,8 @@ jobs:
             - name: Build the Setup.exe (Squirrel, x64, signed)
               working-directory: apps/desktop
               shell: bash
-              run: pnpm run build --publish never --x64 -w squirrel
+              # The log is kept: every «signing with signtool.exe» line is one eSigner signing (counted below).
+              run: pnpm run build --publish never --x64 -w squirrel 2>&1 | tee ../../build-squirrel.log
 
             - name: Trust the eSigner demo certificate
               if: ${{ !inputs.sign }}
@@ -151,10 +152,14 @@ jobs:
                   test -f "dist/squirrel-windows/twoecure-desktop-$VERSION-full.nupkg"
                   test -f dist/squirrel-windows/RELEASES
                   for f in dist/squirrel-windows/*.exe dist/win-unpacked/*.exe; do "$SIGNTOOL_PATH" verify //pa //v "$f" | grep -E "Issued to|Successfully verified"; done
-                  # Every signature costs an eSigner signing: count the signed files of this build.
-                  n=0; while IFS= read -r -d '' f; do "$SIGNTOOL_PATH" verify //pa //q "$f" >/dev/null 2>&1 && n=$((n+1)); done \
+                  # eSigner bills each signing: count electron-builder's signtool runs (the first run: 5, as 2ecure.exe is
+                  # signed twice). Files with any valid signature (also other vendors' DLLs) are listed apart.
+                  n=$(grep -c 'signing with signtool.exe' ../../build-squirrel.log || true)
+                  echo "eSigner signings in this build: $n" | tee -a "$GITHUB_STEP_SUMMARY"
+                  test "$n" -gt 0
+                  m=0; while IFS= read -r -d '' f; do "$SIGNTOOL_PATH" verify //pa //q "$f" >/dev/null 2>&1 && m=$((m+1)); done \
                     < <(find dist/win-unpacked dist/squirrel-windows -type f \( -iname '*.exe' -o -iname '*.dll' -o -iname '*.node' \) -print0)
-                  echo "signed files in this build: $n" | tee -a "$GITHUB_STEP_SUMMARY"
+                  echo "files with a valid signature (any signer): $m" | tee -a "$GITHUB_STEP_SUMMARY"
                   # What was built, for the publish step (it refuses anything but «production»).
                   echo "$VERSION ${{ inputs.sign && 'production' || 'test-untrusted' }} $ED_SIGNTOOL_SUBJECT_NAME $ED_SIGNTOOL_THUMBPRINT $GITHUB_SHA" > dist/squirrel-windows/SIGNING-windows
                   cat dist/squirrel-windows/SIGNING-windows | tee -a "$GITHUB_STEP_SUMMARY"
@@ -180,6 +185,10 @@ jobs:
                       return re.sub(r":\d+$", "", v).strip("[]")
                   hosts = {host(v) for v in found if not v.startswith(("data:", "blob:", "vector:", "chrome", "devtools:", "file:"))}
                   hosts = {h for h in hosts if h and h not in ("localhost", "127.0.0.1", "::1")}
+                  # «wpad» (http://wpad/wpad.dat): Windows' proxy auto-discovery on the local network, asked by Chromium
+                  # when the PC has «Automatically detect settings» on (the runner does). The PC's setting, not the app,
+                  # and a single-label name that never leaves the local network. Exactly this name, nothing else.
+                  hosts.discard("wpad")
                   print("hosts:", sorted(hosts))
                   bad = sorted(h for h in hosts if not re.fullmatch(r"(?:[a-z0-9-]+\.)*2ecure\.com", h))
                   if not hosts: sys.exit("net log has no hosts: the capture did not work")
