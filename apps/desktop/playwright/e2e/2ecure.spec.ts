@@ -92,7 +92,10 @@ test.describe("2ecure desktop", () => {
 
         await page.locator(".mx_AuthPage").waitFor({ timeout: 60_000 });
         const signInWindow = app.waitForEvent("window");
-        await page.locator(".mx_Login_fullWidthButton").click(); // Element's «Continue» (Login.tsx, OAuth)
+        // Element's «Continue» (Login.tsx, OAuth). Not waiting after the click: the main window's navigation to the
+        // account service is stopped by the app before it sends a request, and Playwright's wait for navigations a
+        // click starts (in Chromium) ends only at a commit or a failed request.
+        await page.locator(".mx_Login_fullWidthButton").click({ noWaitAfter: true });
         const signIn = await signInWindow;
         // The account service's sign-in form, in the app.
         await signIn.waitForURL(/^https:\/\/account\.2ecure\.com\//, { timeout: 60_000 });

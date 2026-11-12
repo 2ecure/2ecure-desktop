@@ -212,6 +212,16 @@ jobs:
                   # a bare «2ecure» selected Element's own tests too (they wait for Element's welcome page, which 2ecure has not).
                   ELEMENT_DESKTOP_EXECUTABLE=../../test-app/2ecure.exe pnpm playwright test '2ecure\.spec\.ts$' --reporter=list
 
+            - name: Upload the test results (only when a check failed)
+              if: failure()
+              uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+              with:
+                  # Playwright's error context, screenshots and the trace of a retry: no account is used in these checks.
+                  name: ${{ env.ARTIFACT_PREFIX }}-test-results-${{ inputs.version }}
+                  path: apps/desktop/playwright/test-results/
+                  retention-days: 7
+                  if-no-files-found: ignore
+
             - name: Build the Microsoft Store package (AppX, x64 and arm64, unsigned)
               if: env.HAVE_APPX == 'true'
               working-directory: apps/desktop
