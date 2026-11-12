@@ -26,6 +26,7 @@ import path from "node:path";
 import { _t } from "./language-helper.js";
 import { saveImageToFile } from "./save-image.js";
 import { getConfig } from "./config.js";
+import { isSignInUrl, openSignInWindow } from "./signin-window.js";
 
 const MAILTO_PREFIX = "mailto:";
 
@@ -52,7 +53,7 @@ function saveDialogFilters(fileName: string): FileFilter[] | undefined {
     ];
 }
 
-function safeOpenURL(target: string): void {
+export function safeOpenURL(target: string): void {
     // openExternal passes the target to open/start/xdg-open,
     // so put fairly stringent limits on what can be opened
     // (for instance, open /bin/sh does indeed open a terminal
@@ -73,6 +74,8 @@ function onWindowOrNavigate(ev: Event, target: string): void {
     // app, as we could end up opening any sort of random
     // url in a window that has node scripting access.
     ev.preventDefault();
+    // 2ecure: the sign-in at 2ecure's account service opens in the app's own sign-in window (signin-window.ts).
+    if (isSignInUrl(target) && openSignInWindow(target)) return;
     safeOpenURL(target);
 }
 
@@ -286,7 +289,8 @@ ipcMain.on("userDownloadAction", async function (ev: IpcMainEvent, { id, open = 
 
 export default (webContents: WebContents): void => {
     webContents.setWindowOpenHandler((details) => {
-        safeOpenURL(details.url);
+        // 2ecure: as in onWindowOrNavigate.
+        if (!(isSignInUrl(details.url) && openSignInWindow(details.url))) safeOpenURL(details.url);
         return { action: "deny" };
     });
 

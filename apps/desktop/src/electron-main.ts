@@ -35,7 +35,8 @@ import "./x509.js";
 import * as tray from "./tray.js";
 import Store from "./store.js";
 import { buildMenuTemplate } from "./vectormenu.js";
-import webContentsHandler from "./webcontents-handler.js";
+import webContentsHandler, { safeOpenURL } from "./webcontents-handler.js";
+import { setUpSignInWindow } from "./signin-window.js";
 import * as updater from "./updater.js";
 import ProtocolHandler from "./protocol.js";
 import { _t, AppLocalization } from "./language-helper.js";
@@ -54,6 +55,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const buildConfig = getBuildConfig();
 const protocolHandler = new ProtocolHandler(buildConfig.protocol);
+// 2ecure: sign-in in a window of the app; its result goes the way of a link from the system (signin-window.ts).
+setUpSignInWindow({
+    scheme: buildConfig.protocol,
+    onCallback: (url) => protocolHandler.handleDeeplink(url),
+    openExternal: safeOpenURL,
+});
 const args = getArgs(protocolHandler);
 
 app.setPath("userData", args.userDataPath);

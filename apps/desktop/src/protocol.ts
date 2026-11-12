@@ -69,7 +69,8 @@ export default class ProtocolHandler {
         };
     };
 
-    private handleDeeplink(url: string): boolean {
+    // 2ecure: public, for the sign-in window (signin-window.ts), which hands over its result the same way.
+    public handleDeeplink(url: string): boolean {
         if (!global.mainWindow) return false;
 
         const parsed = new URL(url);
